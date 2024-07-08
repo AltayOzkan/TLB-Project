@@ -3,30 +3,30 @@
 # ---------------------------------------
 
 # Source files for the C and C++ parts of the project
-C_SRCS = src/main.c src/utils.c
-CPP_SRCS = src/tlb_simulator.cpp src/tlb.cpp
+C_SRCS = main.c 
+CPP_SRCS = simulation.cpp
 
 # Object files derived from the source files
 C_OBJS = $(C_SRCS:.c=.o)
 CPP_OBJS = $(CPP_SRCS:.cpp=.o)
 
 # Header files used in the project
-HEADERS = src/tlb.h src/utils.h
+HEADERS = simulation.h
 
 # Name of the output executable
 TARGET = tlb_simulation
 
 # Path to your SystemC installation
-SCPATH = /path/to/systemc
+SYSTEMC_HOME = /home/go98tat/systemc_workspace/systemc
 
 # Compiler flags for C++ compiler
-CXXFLAGS = -std=c++14 -Wall -I$(SCPATH)/include
+CXXFLAGS = -std=c++14 -Wall -I$(SYSTEMC_HOME)/include
 
 # Compiler flags for C compiler
-CFLAGS = -std=c17 -Wall -I$(SCPATH)/include
+CFLAGS = -std=c17 -Wall -I$(SYSTEMC_HOME)/include
 
 # Linker flags to link against SystemC and other libraries
-LDFLAGS = -L$(SCPATH)/lib -lsystemc -lm
+LDFLAGS = -L$(SYSTEMC_HOME)/lib -lsystemc -lm
 
 # ---------------------------------------
 # CONFIGURATION END
@@ -47,7 +47,7 @@ endif
 # Add rpath linker option for all platforms except MacOS (Darwin)
 UNAME_S = $(shell uname -s)
 ifneq ($(UNAME_S), Darwin)
-    LDFLAGS += -Wl,-rpath=$(SCPATH)/lib
+    LDFLAGS += -Wl,-rpath=$(SYSTEMC_HOME)/lib
 endif
 
 # Default target to build the debug version
