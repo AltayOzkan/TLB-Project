@@ -1,28 +1,27 @@
 #include <systemc.h>
 #include <iostream>
 #include <fstream>
-#include <sstream>
 #include <cmath>
-#include <vector>
 #include <string>
 #include "simulation.h"
 
 using namespace sc_core;
 using namespace sc_dt;
 
-// Define TLB module
+#define MAX_TLB_ENTRIES 1024
+
+struct TLBEntry {
+    uint32_t virtualAddr;
+    uint32_t physicalAddr;
+    bool valid;
+};
+
 SC_MODULE(TLB) {
     sc_in<bool> clk;
     sc_in<bool> reset;
     sc_in<uint32_t> virtualAddr;
     sc_out<uint32_t> physicalAddr;
     sc_out<bool> hit;
-
-    struct TLBEntry {
-        uint32_t virtualAddr;
-        uint32_t physicalAddr;
-        bool valid;
-    };
 
     TLBEntry* tlb;
     size_t tlbSize;
@@ -62,7 +61,7 @@ SC_MODULE(TLB) {
         sensitive << clk.pos();
         tlbSize = MAX_TLB_ENTRIES;
         tlb = new TLBEntry[tlbSize];
-        offset_bits = static_cast<int>(log2(64)); // Assume block size is 64 bytes
+        initialize_tlb();
     }
 
     ~TLB() {
@@ -70,13 +69,12 @@ SC_MODULE(TLB) {
     }
 };
 
-// Define Simulation module
 SC_MODULE(Simulation) {
     sc_in<bool> clk;
     sc_in<bool> reset;
     sc_out<uint32_t> virtualAddr;
-    sc_in<uint32_t> physicalAddr;
-    sc_in<bool> hit;
+    sc_in<uint32_t> physicalAddr; 
+    sc_in<bool> hit; 
 
     TLB* tlb;
     Request* requests;
@@ -90,38 +88,64 @@ SC_MODULE(Simulation) {
     Result result;
 
     void run() {
-        if (reset.read() == true) {
-            currentRequest = 0;
-            result = {0};
-            return;
-        }
+        std::cout << "Simulation started." << std::endl;
+        wait(); // First waiting period for stabilization of signal
 
-        if (currentRequest < numRequests) {
-            Request req = requests[currentRequest];
-            virtualAddr.write(req.addr);
-
-            wait(tlbLatency, SC_NS);
-
-            if (hit.read() == true) {
-                result.hits++;
-                if (trace_fp.is_open()) {
-                    trace_fp << "Hit: Virtual Address " << req.addr << ", Physical Address " << physicalAddr.read() << "\n";
-                }
-            } else {
-                result.misses++;
-                wait(memoryLatency, SC_NS);
-                uint32_t physAddr = req.addr + v2bBlockOffset * blocksize;
-                virtualAddr.write(physAddr);
-                if (trace_fp.is_open()) {
-                    trace_fp << "Miss: Virtual Address " << req.addr << ", Translated Physical Address " << physAddr << "\n";
-                    
-                }
-                // Update the TLB
-                tlb->tlb_update(req.addr, physAddr);
+        while (true) {
+            if (reset.read() == true) {
+                currentRequest = 0;
+                result = {0};
+                std::cout << "Simulation reset" << std::endl;
             }
 
-            result.cycles++;
-            currentRequest++;
+            if (currentRequest < numRequests) {
+                Request req = requests[currentRequest];
+                virtualAddr.write(req.addr);
+
+                wait(clk.posedge_event()); 
+                if (reset.read() == true) {
+                } else {
+                    wait(tlbLatency, SC_NS); // Wait for TLB lookup latency
+
+                    if (hit.read() == true) {
+                        result.hits++;
+                        if (trace_fp.is_open()) {
+                            trace_fp << "Hit: Virtual Address " << std::hex << req.addr << ", Physical Address " << physicalAddr.read() << "\n";
+                            trace_fp.flush(); // Ensure data is written to the file
+                        } else {
+                            std::cerr << "Trace file is not open for writing at hit check." << std::endl;
+                        }
+                    } else {
+                        result.misses++;
+                        wait(memoryLatency, SC_NS); // Wait for memory access latency
+                        uint32_t physAddr = req.addr + v2bBlockOffset * blocksize;
+                        if (trace_fp.is_open()) {
+                            trace_fp << "Miss: Virtual Address " << std::hex << req.addr << ", Translated Physical Address " << physAddr << "\n";
+                            trace_fp.flush(); // Ensure data is written to the file
+                        } else {
+                            std::cerr << "Trace file is not open for writing at miss check." << std::endl;
+                        }
+                        // Update the TLB
+                        tlb->tlb_update(req.addr, physAddr);
+                    }
+
+                    result.cycles++;
+                    currentRequest++;
+                    std::cout << "Cycle: " << result.cycles << ", Current Request: " << currentRequest << std::endl;
+
+                    // Additional check: Prevent excessive cycle count
+                    if (result.cycles > 1000) { // Adjust as necessary
+                        std::cerr << "Error: Cycle count exceeded limit" << std::endl;
+                        sc_stop(); // Stop simulation
+                    }
+                }
+
+            } else {
+                std::cout << "Simulation complete" << std::endl;
+                sc_stop(); // Stop the simulation
+            }
+
+            wait(); // Wait for the next clock cycle
         }
     }
 
@@ -142,31 +166,25 @@ SC_MODULE(Simulation) {
     }
 };
 
-std::vector<Request> read_requests_from_file(const char* filename) {
-    std::vector<Request> requests;
-    std::ifstream infile(filename);
-    if (!infile) {
-        std::cerr << "Error opening input file: " << filename << std::endl;
-        exit(1);
-    }
+unsigned calculate_primitive_gates(unsigned tlb_size, unsigned block_size, unsigned v2b_block_offset, unsigned memory_latency, unsigned tlb_latency) {
+    unsigned base_gates = 1000; // Gates required basic circuitry
 
-    std::string line;
-    std::getline(infile, line); // Skip header line
+    // Calculate gates for storing TLB entries
+    unsigned bits_per_entry = 32 * 2 + 1; // virtualAddr (32 bits), physicalAddr (32 bits), valid (1 bit)
+    unsigned storage_gates_per_entry = bits_per_entry * 4; // 4 gates per bit for storage
+    unsigned total_storage_gates = tlb_size * storage_gates_per_entry;
 
-    while (std::getline(infile, line)) {
-        std::istringstream iss(line);
-        std::string addr_str;
-        if (iss >> addr_str) {
-            Request req;
-            req.addr = std::stoul(addr_str, nullptr, 16); // Convert hex string to uint32_t
-            requests.push_back(req);
-        }
-    }
+    // Adding gates for data path logic
+    // Assuming each addition of two 32-bit numbers requires approximately 150 gates
+    unsigned datapath_gates = tlb_size * 150; // Assumıng that ın every TLB entry we wıll requıre one arıthmetıc operatıon
 
-    return requests;
+    // Combining all gates
+    unsigned total_gates = base_gates + total_storage_gates + datapath_gates;
+
+    return total_gates;
 }
 
-Result run_simulation(
+extern "C" Result run_simulation(
     int cycles,
     unsigned tlbSize,
     unsigned tlbLatency,
@@ -177,6 +195,11 @@ Result run_simulation(
     Request* requests,
     const char* tracefile
 ) {
+    std::cout << "run_simulation called with parameters:" << std::endl;
+    std::cout << "Cycles: " << cycles << ", TLB Size: " << tlbSize << ", TLB Latency: " << tlbLatency << std::endl;
+    std::cout << "Block Size: " << blocksize << ", V2B Block Offset: " << v2bBlockOffset << ", Memory Latency: " << memoryLatency << std::endl;
+    std::cout << "Number of Requests: " << numRequests << std::endl;
+
     sc_signal<bool> clk;
     sc_signal<bool> reset;
     sc_signal<uint32_t> virtualAddr;
@@ -196,8 +219,8 @@ Result run_simulation(
     sim.clk(clk);
     sim.reset(reset);
     sim.virtualAddr(virtualAddr);
-    sim.physicalAddr(physicalAddr);
-    sim.hit(hit);
+    sim.physicalAddr(physicalAddr); // sc_in olarak kullanılıyor
+    sim.hit(hit); // sc_in olarak kullanılıyor
     sim.requests = requests;
     sim.numRequests = numRequests;
     sim.tlbLatency = tlbLatency;
@@ -207,9 +230,19 @@ Result run_simulation(
     sim.set_tlb(&tlb);
 
     if (tracefile) {
+        std::cout << "Attempting to open trace file: " << tracefile << std::endl;
         sim.trace_fp.open(tracefile);
+        if (!sim.trace_fp.is_open()) {
+            std::cerr << "Error opening trace file: " << tracefile << std::endl;
+            exit(1);
+        } else {
+            std::cout << "Trace file opened successfully." << std::endl;
+        }
+    } else {
+        std::cerr << "Trace file path is null." << std::endl;
     }
 
+    std::cout << "Starting simulation..." << std::endl;
     sc_start(0, SC_NS);
     reset = true;
     clk = false;
@@ -223,9 +256,20 @@ Result run_simulation(
         sc_start(1, SC_NS);
         clk = true;
         sc_start(1, SC_NS);
+        if (!sc_is_running()) {
+            break;
+        }
     }
 
-    return sim.result;
+    Result result = sim.result;
+    result.primitiveGateCount = calculate_primitive_gates(tlbSize, blocksize, v2bBlockOffset, memoryLatency, tlbLatency);
+
+    std::cout << "Simulation finished." << std::endl;
+    std::cout << "Cycles: " << result.cycles << ", Hits: " << result.hits << ", Misses: " << result.misses << std::endl;
+    return result;
 }
 
-
+int sc_main(int argc, char* argv[]) {  
+    // Example values
+    return 0;
+}
