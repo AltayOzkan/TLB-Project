@@ -114,6 +114,7 @@ SC_MODULE(Simulation) {
                 virtualAddr.write(physAddr);
                 if (trace_fp.is_open()) {
                     trace_fp << "Miss: Virtual Address " << req.addr << ", Translated Physical Address " << physAddr << "\n";
+                    
                 }
                 // Update the TLB
                 tlb->tlb_update(req.addr, physAddr);
@@ -227,29 +228,4 @@ Result run_simulation(
     return sim.result;
 }
 
-int sc_main(int argc, char* argv[]) {
-    if (argc < 2) {
-        std::cerr << "Usage: " << argv[0] << " <input_file>" << std::endl;
-        return 1;
-    }
 
-    const char* input_file = argv[1];
-    std::vector<Request> requests = read_requests_from_file(input_file);
-    
-    int cycles = 1000;
-    unsigned tlbSize = 128;
-    unsigned tlbLatency = 3;
-    unsigned blocksize = 64;
-    unsigned v2bBlockOffset = 4;
-    unsigned memoryLatency = 5;
-    const char* tracefile = "trace.txt";
-
-    Result result = run_simulation(cycles, tlbSize, tlbLatency, blocksize, v2bBlockOffset, memoryLatency, requests.size(), requests.data(), tracefile);
-
-    std::cout << "Cycles: " << result.cycles << std::endl;
-    std::cout << "Misses: " << result.misses << std::endl;
-    std::cout << "Hits: " << result.hits << std::endl;
-    std::cout << "Primitive Gate Count: " << result.primitiveGateCount << std::endl;
-
-    return 0;
-}

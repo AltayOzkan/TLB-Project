@@ -11,12 +11,12 @@ void print_help() {
     printf("Usage: program [options] <input_file>\n");
     printf("Options:\n");
     printf("  -c, --cycles <number>        Number of cycles to simulate\n");
-    printf("      --blocksize <number>     Size of memory blocks in bytes\n");
-    printf("      --v2b-block-offset <number>  Offset to translate virtual to physical addresses\n");
-    printf("      --tlb-size <number>      Size of the TLB in entries\n");
-    printf("      --tlb-latency <number>   TLB latency in cycles\n");
-    printf("      --memory-latency <number> Memory latency in cycles\n");
-    printf("      --tf <file>              Tracefile to output signals\n");
+    printf("  -b, --blocksize <number>     Size of memory blocks in bytes\n");
+    printf("  -o, --v2b-block-offset <number>  Offset to translate virtual to physical addresses\n");
+    printf("  -t, --tlb-size <number>      Size of the TLB in entries\n");
+    printf("  -l, --tlb-latency <number>   TLB latency in cycles\n");
+    printf("  -m, --memory-latency <number> Memory latency in cycles\n");
+    printf("  -f, --tf <file>              Tracefile to output signals\n");
     printf("  -h, --help                   Print this help message\n");
 }
 
@@ -34,19 +34,19 @@ int main(int argc, char *argv[]) {
     // Komut satırı argümanlarını işlemek için getopt_long kullan
     static struct option long_options[] = {
         {"cycles", required_argument, 0, 'c'},
-        {"blocksize", required_argument, 0, 0},
-        {"v2b-block-offset", required_argument, 0, 0},
-        {"tlb-size", required_argument, 0, 0},
-        {"tlb-latency", required_argument, 0, 0},
-        {"memory-latency", required_argument, 0, 0},
-        {"tf", required_argument, 0, 0},
+        {"blocksize", required_argument, 0, 'b'},
+        {"v2b-block-offset", required_argument, 0, 'o'},
+        {"tlb-size", required_argument, 0, 't'},
+        {"tlb-latency", required_argument, 0, 'l'},
+        {"memory-latency", required_argument, 0, 'm'},
+        {"tf", required_argument, 0, 'f'},
         {"help", no_argument, 0, 'h'},
         {0, 0, 0, 0}
     };
 
     int opt;
     int long_index = 0;
-    while ((opt = getopt_long(argc, argv, "c:h", long_options, &long_index)) != -1) {
+    while ((opt = getopt_long(argc, argv, "c:b:o:t:l:m:f:h", long_options, &long_index)) != -1) {
         switch (opt) {
             case 'c':
                 cycles = atoi(optarg);
@@ -54,20 +54,23 @@ int main(int argc, char *argv[]) {
             case 'h':
                 print_help();
                 return 0;
-            case 0:
-                if (strcmp("blocksize", long_options[long_index].name) == 0) {
-                    blocksize = atoi(optarg);
-                } else if (strcmp("v2b-block-offset", long_options[long_index].name) == 0) {
-                    v2b_block_offset = atoi(optarg);
-                } else if (strcmp("tlb-size", long_options[long_index].name) == 0) {
-                    tlb_size = atoi(optarg);
-                } else if (strcmp("tlb-latency", long_options[long_index].name) == 0) {
-                    tlb_latency = atoi(optarg);
-                } else if (strcmp("memory-latency", long_options[long_index].name) == 0) {
-                    memory_latency = atoi(optarg);
-                } else if (strcmp("tf", long_options[long_index].name) == 0) {
-                    tracefile = optarg;
-                }
+            case 'b':
+                blocksize = atoi(optarg);
+                break;
+            case 'o':
+                v2b_block_offset = atoi(optarg);
+                break;
+            case 't':
+                tlb_size = atoi(optarg);
+                break;
+            case 'l':
+                tlb_latency = atoi(optarg);
+                break;
+            case 'm':
+                memory_latency = atoi(optarg);
+                break;
+            case 'f':
+                tracefile = optarg;
                 break;
             default:
                 print_help();
@@ -114,12 +117,14 @@ int main(int argc, char *argv[]) {
     while (fgets(line, sizeof(line), file)) {
         if (num_requests >= capacity) {
             capacity *= 2;
-            requests = realloc(requests, capacity * sizeof(struct Request));
-            if (!requests) {
+            struct Request *new_requests = realloc(requests, capacity * sizeof(struct Request));
+            if (!new_requests) {
                 perror("Failed to reallocate memory");
+                free(requests);
                 fclose(file);
                 return 1;
             }
+            requests = new_requests;
         }
         char type;
         unsigned addr;

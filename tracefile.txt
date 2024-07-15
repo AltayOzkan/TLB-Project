@@ -1,0 +1,1 @@
+Miss: Virtual Address 498, Translated Physical Address 626
