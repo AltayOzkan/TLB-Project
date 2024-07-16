@@ -139,10 +139,7 @@ SC_MODULE(Simulation) {
                 std::cout << "Cycle: " << result.cycles << ", Current Request: " << currentRequest << std::endl;
 
                 // Additional check: Prevent excessive cycle count
-                if (result.cycles > maxCycles) { // Adjust as necessary
-                    std::cerr << "Error: Cycle count exceeded limit" << std::endl;
-                    sc_stop(); // Stop simulation
-                }
+                
             } else {
                 std::cout << "Simulation complete" << std::endl;
                 sc_stop(); // Stop the simulation
@@ -212,16 +209,15 @@ extern "C" Result run_simulation(
     Request* requests,
     const char* tracefile
 ) {
-    // Print the parameters to verify they are being read correctly
-    std::cout << "run_simulation called with parameters:" << std::endl;
-    std::cout << "Cycles: " << cycles << ", TLB Size: " << tlbSize << ", TLB Latency: " << tlbLatency << std::endl;
-    std::cout << "Block Size: " << blocksize << ", V2B Block Offset: " << v2bBlockOffset << ", Memory Latency: " << memoryLatency << std::endl;
-    std::cout << "Number of Requests: " << numRequests << std::endl;
-
     if (!is_power_of_two(tlbSize) || !is_power_of_two(blocksize)) {
         std::cerr << "Error: TLB size and block size must be powers of two." << std::endl;
         exit(1);
     }
+
+    std::cout << "run_simulation called with parameters:" << std::endl;
+    std::cout << "Cycles: " << cycles << ", TLB Size: " << tlbSize << ", TLB Latency: " << tlbLatency << std::endl;
+    std::cout << "Block Size: " << blocksize << ", V2B Block Offset: " << v2bBlockOffset << ", Memory Latency: " << memoryLatency << std::endl;
+    std::cout << "Number of Requests: " << numRequests << std::endl;
 
     sc_signal<bool> clk;
     sc_signal<bool> reset;
@@ -229,7 +225,6 @@ extern "C" Result run_simulation(
     sc_signal<uint32_t> physicalAddr;
     sc_signal<bool> hit;
 
-    // Create the TLB with the given size
     TLB tlb("TLB", tlbSize, static_cast<int>(log2(blocksize)));
     tlb.clk(clk);
     tlb.reset(reset);
@@ -292,41 +287,13 @@ extern "C" Result run_simulation(
 
     std::cout << "Simulation finished." << std::endl;
     std::cout << "Cycles: " << result.cycles << ", Hits: " << result.hits << ", Misses: " << result.misses << std::endl;
+
+        sim.check_completion();
+
     return result;
 }
 
 int sc_main(int argc, char* argv[]) {
-    if (argc < 9) {
-        std::cerr << "Usage: " << argv[0] << " <cycles> <tlbSize> <tlbLatency> <blocksize> <v2bBlockOffset> <memoryLatency> <numRequests> <tracefile>" << std::endl;
-        return 1;
-    }
-
-    int cycles = std::stoi(argv[1]);
-    unsigned tlbSize = std::stoul(argv[2]);
-    unsigned tlbLatency = std::stoul(argv[3]);
-    unsigned blocksize = std::stoul(argv[4]);
-    unsigned v2bBlockOffset = std::stoul(argv[5]);
-    unsigned memoryLatency = std::stoul(argv[6]);
-    size_t numRequests = std::stoul(argv[7]);
-    const char* tracefile = argv[8];
-
-    std::vector<Request> requests(numRequests);
-    // Populate the requests vector as needed
-
-    Result result = run_simulation(
-        cycles,
-        tlbSize,
-        tlbLatency,
-        blocksize,
-        v2bBlockOffset,
-        memoryLatency,
-        numRequests,
-        requests.data(),
-        tracefile
-    );
-
-    // Print the result for debugging
-    std::cout << "Result: Cycles=" << result.cycles << ", Hits=" << result.hits << ", Misses=" << result.misses << ", PrimitiveGateCount=" << result.primitiveGateCount << std::endl;
-
+    // Example values
     return 0;
 }
