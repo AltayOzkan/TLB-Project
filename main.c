@@ -1,4 +1,3 @@
-// src/main.c
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,7 +5,7 @@
 #include <getopt.h>
 #include "simulation.h"
 
-// Yardım mesajı
+// Help 
 void print_help() {
     printf("Usage: program [options] <input_file>\n");
     printf("Options:\n");
@@ -20,7 +19,7 @@ void print_help() {
     printf("  -h, --help                   Print this help message\n");
 }
 
-// Ana fonksiyon
+// Main Function
 int main(int argc, char *argv[]) {
     int cycles = 0;
     unsigned blocksize = 0;
@@ -31,7 +30,7 @@ int main(int argc, char *argv[]) {
     char *tracefile = NULL;
     char *input_file = NULL;
 
-    // Komut satırı argümanlarını işlemek için getopt_long kullan
+    // Assigning values to the parameters so it will be easier to put in to the
     static struct option long_options[] = {
         {"cycles", required_argument, 0, 'c'},
         {"blocksize", required_argument, 0, 'b'},
@@ -46,6 +45,7 @@ int main(int argc, char *argv[]) {
 
     int opt;
     int long_index = 0;
+    //Parsing CLI
     while ((opt = getopt_long(argc, argv, "c:b:o:t:l:m:f:h", long_options, &long_index)) != -1) {
         switch (opt) {
             case 'c':
@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    // Positional argüman olarak input file'ı al
+    // Taking the input file as positional argument
     if (optind < argc) {
         input_file = argv[optind];
     } else {
@@ -87,26 +87,26 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // Parametrelerin geçerliliğini kontrol et
+    // Checking the legitimacy of parameters
     if (cycles <= 0 || blocksize == 0 || tlb_size == 0 || tlb_latency == 0 || memory_latency == 0) {
         fprintf(stderr, "All parameters must be set and greater than zero\n");
         print_help();
         return 1;
     }
 
-    // Dosyayı aç ve CSV verisini oku
+    // Reading the cvs data
     FILE *file = fopen(input_file, "r");
     if (!file) {
         perror("Failed to open file");
-        fprintf(stderr, "Error opening file: %s\n", input_file); // Daha ayrıntılı hata mesajı
+        fprintf(stderr, "Error opening file: %s\n", input_file); // More detailed version of a help message
         return 1;
     }
 
-    // Request structlarını oku ve bir arrayde sakla
-    struct Request *requests = NULL;
+    // Reading the request struct and storing in an array
+    Request *requests = NULL;
     size_t num_requests = 0;
     size_t capacity = 10;
-    requests = malloc(capacity * sizeof(struct Request));
+    requests = malloc(capacity * sizeof(Request));
     if (!requests) {
         perror("Failed to allocate memory");
         fclose(file);
@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
     while (fgets(line, sizeof(line), file)) {
         if (num_requests >= capacity) {
             capacity *= 2;
-            struct Request *new_requests = realloc(requests, capacity * sizeof(struct Request));
+            Request *new_requests = realloc(requests, capacity * sizeof(Request));
             if (!new_requests) {
                 perror("Failed to reallocate memory");
                 free(requests);
@@ -143,10 +143,9 @@ int main(int argc, char *argv[]) {
     }
     fclose(file);
 
-    // Simülasyonu çalıştır
-    struct Result result = run_simulation(cycles, tlb_size, tlb_latency, blocksize, v2b_block_offset, memory_latency, num_requests, requests, tracefile);
+    // Run the simulation, used extern in the cpp file
+    Result result = run_simulation(cycles, tlb_size, tlb_latency, blocksize, v2b_block_offset, memory_latency, num_requests, requests, tracefile);
 
-    // Sonuçları yazdır
     printf("Cycles: %zu\n", result.cycles);
     printf("Hits: %zu\n", result.hits);
     printf("Misses: %zu\n", result.misses);

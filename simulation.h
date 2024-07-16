@@ -1,26 +1,27 @@
+#ifndef SIMULATION_H
+#define SIMULATION_H
+
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <stdint.h>
-#include <stddef.h>
-
-#define MAX_TLB_ENTRIES 1024
-
-struct Request {
-    uint32_t addr;
-    uint32_t data;
+// Tam tanımlı struct'ları ekleyin
+typedef struct {
+    unsigned addr;
+    unsigned data;
     int we;
-};
+} Request;
 
-struct Result {
+typedef struct {
     size_t cycles;
-    size_t misses;
     size_t hits;
+    size_t misses;
     size_t primitiveGateCount;
-};
+} Result;
 
-struct Result run_simulation(
+Result run_simulation(
     int cycles,
     unsigned tlbSize,
     unsigned tlbLatency,
@@ -28,10 +29,12 @@ struct Result run_simulation(
     unsigned v2bBlockOffset,
     unsigned memoryLatency,
     size_t numRequests,
-    struct Request* requests,
+    Request* requests,
     const char* tracefile
 );
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif
