@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
     char *tracefile = NULL;
     char *input_file = NULL;
 
-    // Assigning values to the parameters so it will be easier to put in to the
+    // Assigning values to the parameters so it will be easier to put it as switch cases
     static struct option long_options[] = {
         {"cycles", required_argument, 0, 'c'},
         {"blocksize", required_argument, 0, 'b'},
