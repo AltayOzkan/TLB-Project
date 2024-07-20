@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-// Tam tanımlı struct'ları ekleyin
+
 typedef struct {
     unsigned addr;
     unsigned data;

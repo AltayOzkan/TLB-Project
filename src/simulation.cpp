@@ -209,8 +209,8 @@ extern "C" Result run_simulation(
     Request* requests,
     const char* tracefile
 ) {
-    if (!is_power_of_two(tlbSize) || !is_power_of_two(blocksize)) {
-        std::cerr << "Error: TLB size and block size must be powers of two." << std::endl;
+    if (!is_power_of_two(blocksize)) {
+        std::cerr << "Error: Block size must be powers of two." << std::endl;
         exit(1);
     }
 
@@ -286,7 +286,6 @@ extern "C" Result run_simulation(
     result.primitiveGateCount = calculate_primitive_gates(tlbSize, blocksize, v2bBlockOffset, memoryLatency, tlbLatency);
 
     std::cout << "Simulation finished." << std::endl;
-    std::cout << "Cycles: " << result.cycles << ", Hits: " << result.hits << ", Misses: " << result.misses << std::endl;
 
         sim.check_completion();
 

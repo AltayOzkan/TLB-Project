@@ -1,79 +1,79 @@
 # ---------------------------------------
 # CONFIGURATION BEGIN
 # ---------------------------------------
+# Source Directories
+C_SRCDIR = src
+CPP_SRCDIR = src
 
-# Source files for the C and C++ parts of the project
-C_SRCS = main.c 
-CPP_SRCS = simulation.cpp
+# Source files for C and C++
+C_SRCS = $(wildcard $(C_SRCDIR)/*.c)
+CPP_SRCS = $(wildcard $(CPP_SRCDIR)/*.cpp)
 
-# Object files derived from the source files
+# Object files of the source files
 C_OBJS = $(C_SRCS:.c=.o)
 CPP_OBJS = $(CPP_SRCS:.cpp=.o)
 
-# Header files used in the project
-HEADERS = simulation.h
+# Header files 
+HEADERS = $(wildcard $(C_SRCDIR)/*.h) $(wildcard $(CPP_SRCDIR)/*.h)
 
 # Name of the output executable
 TARGET = tlb_simulation
 
-# Path to your SystemC installation
-SYSTEMC_HOME = /home/go98tat/systemc_workspace/systemc
+# Path to SystemC
+SYSTEMC_HOME = ../systemc
 
-# Compiler flags for C++ compiler
+# C++ Compiler Flags
 CXXFLAGS = -std=c++14 -Wall -I$(SYSTEMC_HOME)/include
 
-# Compiler flags for C compiler
+# C Compiler Flags
 CFLAGS = -std=c17 -Wall -I$(SYSTEMC_HOME)/include
 
-# Linker flags to link against SystemC and other libraries
+# Linker flags -> link SystemC and other libraries
 LDFLAGS = -L$(SYSTEMC_HOME)/lib -lsystemc -lm
 
 # ---------------------------------------
 # CONFIGURATION END
 # ---------------------------------------
 
-# Determine if g++ or clang++ is available, and set it as the C++ compiler
+# check if g++/ clang++ is available -> set as C++ compiler
 CXX = $(shell command -v g++ || command -v clang++)
 ifeq ($(strip $(CXX)),)
     $(error Neither clang++ nor g++ is available. Exiting.)
 endif
 
-# Determine if gcc or clang is available, and set it as the C compiler
+# check if gcc/ clang is available -> set as C compiler
 CC = $(shell command -v gcc || command -v clang)
 ifeq ($(strip $(CC)),)
     $(error Neither clang nor gcc is available. Exiting.)
 endif
 
-# Add rpath linker option for all platforms except MacOS (Darwin)
-UNAME_S = $(shell uname -s)
-ifneq ($(UNAME_S), Darwin)
-    LDFLAGS += -Wl,-rpath=$(SYSTEMC_HOME)/lib
-endif
+# rpath linker  
+LDFLAGS += -Wl,-rpath=$(SYSTEMC_HOME)/lib
 
 # Default target to build the debug version
 all: debug
 
-# Rule to compile .c files into .o object files
+# compile .c files into .o object files
 %.o: %.c $(HEADERS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Rule to compile .cpp files into .o object files
+# compile .cpp files into .o object files
 %.o: %.cpp $(HEADERS)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Rule to build the debug version of the project
+# build the debug version
 debug: CXXFLAGS += -g
 debug: $(TARGET)
 
-# Rule to build the release version of the project
+# build the release version 
 release: CXXFLAGS += -O2
 release: $(TARGET)
 
-# Rule to link all object files into the final executable
+# link all object files into the final executable
 $(TARGET): $(C_OBJS) $(CPP_OBJS)
 	$(CXX) $(CXXFLAGS) $(C_OBJS) $(CPP_OBJS) $(LDFLAGS) -o $(TARGET)
 
-# Rule to clean up the build directory
+# clean up the build directory
 clean:
 	rm -f $(TARGET)
 	rm -rf $(C_OBJS) $(CPP_OBJS)
