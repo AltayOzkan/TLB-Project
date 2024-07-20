@@ -1,5 +1,3 @@
-.PHONY: all clean debug release systemc
-
 # ---------------------------------------
 # CONFIGURATION BEGIN
 # ---------------------------------------
@@ -22,7 +20,7 @@ HEADERS = $(wildcard $(C_SRCDIR)/*.h) $(wildcard $(CPP_SRCDIR)/*.h)
 TARGET = tlb_simulation
 
 # Path to SystemC
-SYSTEMC_HOME = $(shell pwd)/systemc
+SYSTEMC_HOME = systemc
 
 # C++ Compiler Flags
 CXXFLAGS = -std=c++14 -Wall -I$(SYSTEMC_HOME)/include
@@ -38,13 +36,13 @@ LDFLAGS = -L$(SYSTEMC_HOME)/lib -lsystemc -lm
 # ---------------------------------------
 
 # Check if g++/ clang++ is available -> set as C++ compiler
-CXX := $(shell command -v g++ 2>/dev/null || command -v clang++ 2>/dev/null)
+CXX := $(shell command -v g++ || command -v clang++)
 ifeq ($(strip $(CXX)),)
     $(error Neither clang++ nor g++ is available. Exiting.)
 endif
 
 # Check if gcc/ clang is available -> set as C compiler
-CC := $(shell command -v gcc 2>/dev/null || command -v clang 2>/dev/null)
+CC := $(shell command -v gcc || command -v clang)
 ifeq ($(strip $(CC)),)
     $(error Neither clang nor gcc is available. Exiting.)
 endif
@@ -52,55 +50,34 @@ endif
 # rpath linker  
 LDFLAGS += -Wl,-rpath=$(SYSTEMC_HOME)/lib
 
-# Default target to build SystemC and the debug version of the project
-all: systemc debug
+# Default target to build the debug version
+all: debug
 
-# Download and install SystemC
-systemc: configure
-	mkdir -p systemc
-	cd temp/systemc/objdir && \
-	cmake -DCMAKE_INSTALL_PREFIX="$(SYSTEMC_HOME)" -DCMAKE_CXX_STANDARD=14 .. && \
-	make -j$$(nproc) 2> ../../../install.log && \
-	make install
-	rm -rf temp
-
-# Rule to configure the SystemC build
-configure: temp
-	cd temp/systemc && \
-	mkdir -p objdir
-
-# Rule to create a temporary directory and clone the SystemC repository
-temp:
-	mkdir -p temp
-	cd temp && git clone --depth 1 --branch 2.3.4 https://github.com/accellera-official/systemc.git
-
-# Rule to compile .c files into .o object files
-$(C_SRCDIR)/%.o: $(C_SRCDIR)/%.c $(HEADERS) | systemc
+# Compile .c files into .o object files
+$(C_SRCDIR)/%.o: $(C_SRCDIR)/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Rule to compile .cpp files into .o object files
-$(CPP_SRCDIR)/%.o: $(CPP_SRCDIR)/%.cpp $(HEADERS) | systemc
+# Compile .cpp files into .o object files
+$(CPP_SRCDIR)/%.o: $(CPP_SRCDIR)/%.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Rule to build the debug version
+# Build the debug version of the project
 debug: CXXFLAGS += -g
 debug: $(TARGET)
 
-# Rule to build the release version 
+# Build the release version of the project
 release: CXXFLAGS += -O2
 release: $(TARGET)
 
-# Rule to link all object files into the final executable
-$(TARGET): $(C_OBJS) $(CPP_OBJS) | systemc
-	$(CXX) $(CXXFLAGS) $(C_OBJS) $(CPP_OBJS) $(LDFLAGS) -o $(TARGET)
+# Link all object files into the final executable
+$(TARGET): $(C_OBJS) $(CPP_OBJS)
+	$(CXX) $(CXXFLAGS) $(C_OBJS) $(CPP_OBJS) $(LDFLAGS) -o $@
 
-# Rule to clean up the build directory
+# Clean up the build directory
 clean:
 	rm -f $(TARGET)
 	rm -f $(C_SRCDIR)/*.o
 	rm -f $(CPP_SRCDIR)/*.o
-	rm -rf systemc
-	rm -rf temp
 
 # Mark targets as phony to prevent conflicts with files of the same name
 .PHONY: all debug release clean

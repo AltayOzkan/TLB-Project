@@ -23,3 +23,7 @@ Verkettete Listen haben ein zufälliges Zugriffsmuster, da die Knoten über den 
 Mit einem Input-File, das nicht die Summe einer Liste darstellt, ändert sich die Anzahl der Zyklen, wenn die TLB-Größe größer wird. Aber wenn wir die Summe einer verketteten Liste als Input-File eingeben bleibt die Anzahl der Zyklen gleich,obwohl die TLB-Größe geändert wurde.
 Mit einem Input-File, das nicht die Summe einer Liste darstellt, ändert sich die Anzahl der Zyklen, wenn die TLB-Größe größer wird. Aber wenn wir die Summe einer verketteten Liste als Input-File eingeben bleibt die Anzahl der Zyklen gleich,obwohl die TLB-Größe geändert wurde. Case: 150-zeilige Input-File Parameters: cycles=1000 blocksize=64 Offset=32 TLB-size=32 tlb-latency=5 memory latency=10 Output: Cycles:1260 Hits:99 Misses:51
 
+Altay Oezkan bearbeitete das Rahmenprogramm und die Themen Schlaltkreisanalyse und Optimierung für die Präsentation als. Paritosh Deshmukh arbeitete an makefile und half bei der Definition von Modulen in simulation.cpp sowie Problemstellung und Ausblick für die Präsentation. Shaurya Songara arbeitete an der Simulation und dem Forschungsteil der Readme und den Präsentationsthemen Korrektheit und Zusammenfassung. 
+
+
+
