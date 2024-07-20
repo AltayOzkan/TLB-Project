@@ -1,3 +1,42 @@
+.PHONY: all clean debug release systemc
+
+# Check if g++ is available, if not, check if clang++ is available
+CXX := $(shell command -v g++ 2>/dev/null)
+ifeq ($(strip $(CXX)),)
+    CXX := $(shell command -v clang++ 2>/dev/null)
+endif
+
+dest_dir := $(shell pwd)/systemc
+
+# Default target to build SystemC and the debug version of the project
+all: systemc debug
+
+# Rule to download and install SystemC
+systemc: configure
+	mkdir -p systemc
+	cd temp/systemc/objdir && \
+	cmake -DCMAKE_INSTALL_PREFIX="$(dest_dir)" -DCMAKE_CXX_STANDARD=14 .. && \
+	make -j$$(nproc) 2> ../../../install.log && \
+	make install
+	rm -rf temp
+
+# Rule to configure the SystemC build
+configure: temp
+	cd temp/systemc && \
+	mkdir -p objdir
+
+# Rule to create a temporary directory and clone the SystemC repository
+temp:
+	mkdir -p temp
+	cd temp && git clone --depth 1 --branch 2.3.4 https://github.com/accellera-official/systemc.git
+
+# Rule to clean up the SystemC installation
+clean:
+	rm -rf systemc
+	rm -rf temp
+	rm -f $(TARGET)
+	rm -f src/*.o
+
 # ---------------------------------------
 # CONFIGURATION BEGIN
 # ---------------------------------------
@@ -6,12 +45,12 @@ C_SRCDIR = src
 CPP_SRCDIR = src
 
 # Source files for C and C++
-C_SRCS = $(wildcard $(C_SRCDIR)/*.c)
-CPP_SRCS = $(wildcard $(CPP_SRCDIR)/*.cpp)
+C_SRCS = $(C_SRCDIR)/main.c
+CPP_SRCS = $(CPP_SRCDIR)/simulation.cpp
 
 # Object files of the source files
-C_OBJS = $(C_SRCS:$(C_SRCDIR)/%.c=$(C_SRCDIR)/%.o)
-CPP_OBJS = $(CPP_SRCS:$(CPP_SRCDIR)/%.cpp=$(CPP_SRCDIR)/%.o)
+C_OBJS = $(C_SRCS:.c=.o)
+CPP_OBJS = $(CPP_SRCS:.cpp=.o)
 
 # Header files 
 HEADERS = $(wildcard $(C_SRCDIR)/*.h) $(wildcard $(CPP_SRCDIR)/*.h)
@@ -78,6 +117,8 @@ clean:
 	rm -f $(TARGET)
 	rm -f $(C_SRCDIR)/*.o
 	rm -f $(CPP_SRCDIR)/*.o
+	rm -rf systemc
+	rm -rf temp
 
 # Mark targets as phony to prevent conflicts with files of the same name
 .PHONY: all debug release clean
