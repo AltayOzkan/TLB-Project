@@ -78,5 +78,14 @@ clean:
 	rm -f $(TARGET)
 	rm -rf $(C_OBJS) $(CPP_OBJS)
 
+# Download and install SystemC
+$(SYSTEMC_HOME):
+	wget https://accellera.org/images/downloads/standards/systemc/systemc-2.3.3.tar.gz
+	tar -xzf systemc-2.3.3.tar.gz
+	cd systemc-2.3.3 && mkdir -p objdir && cd objdir && \
+	../configure --prefix=$(SYSTEMC_HOME) && \
+	$(MAKE) -j4 && $(MAKE) install
+	rm -rf systemc-2.3.3 systemc-2.3.3.tar.gz
+
 # Mark targets as phony to prevent conflicts with files of the same name
 .PHONY: all debug release clean
