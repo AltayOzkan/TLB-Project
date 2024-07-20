@@ -20,7 +20,7 @@ HEADERS = $(wildcard $(C_SRCDIR)/*.h) $(wildcard $(CPP_SRCDIR)/*.h)
 TARGET = tlb_simulation
 
 # Path to SystemC
-SYSTEMC_HOME = ..\systemc
+SYSTEMC_HOME = ../systemc
 
 # C++ Compiler Flags
 CXXFLAGS = -std=c++14 -Wall -I$(SYSTEMC_HOME)/include
