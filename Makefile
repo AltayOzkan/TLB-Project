@@ -10,8 +10,8 @@ C_SRCS = $(wildcard $(C_SRCDIR)/*.c)
 CPP_SRCS = $(wildcard $(CPP_SRCDIR)/*.cpp)
 
 # Object files of the source files
-C_OBJS = $(C_SRCS:.c=.o)
-CPP_OBJS = $(CPP_SRCS:.cpp=.o)
+C_OBJS = $(C_SRCS:$(C_SRCDIR)/%.c=$(C_SRCDIR)/%.o)
+CPP_OBJS = $(CPP_SRCS:$(CPP_SRCDIR)/%.cpp=$(CPP_SRCDIR)/%.o)
 
 # Header files 
 HEADERS = $(wildcard $(C_SRCDIR)/*.h) $(wildcard $(CPP_SRCDIR)/*.h)
@@ -51,14 +51,23 @@ endif
 LDFLAGS += -Wl,-rpath=$(SYSTEMC_HOME)/lib
 
 # Default target to build the debug version
-all: debug
+all: $(SYSTEMC_HOME) debug
+
+# Download and install SystemC
+$(SYSTEMC_HOME):
+	wget https://accellera.org/images/downloads/standards/systemc/systemc-2.3.3.tar.gz
+	tar -xzf systemc-2.3.3.tar.gz
+	cd systemc-2.3.3 && mkdir -p objdir && cd objdir && \
+	../configure --prefix=$(SYSTEMC_HOME) && \
+	$(MAKE) -j4 && $(MAKE) install
+	rm -rf systemc-2.3.3 systemc-2.3.3.tar.gz
 
 # compile .c files into .o object files
-%.o: %.c $(HEADERS)
+$(C_SRCDIR)/%.o: $(C_SRCDIR)/%.c $(HEADERS) | $(SYSTEMC_HOME)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # compile .cpp files into .o object files
-%.o: %.cpp $(HEADERS)
+$(CPP_SRCDIR)/%.o: $(CPP_SRCDIR)/%.cpp $(HEADERS) | $(SYSTEMC_HOME)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # build the debug version
@@ -70,22 +79,14 @@ release: CXXFLAGS += -O2
 release: $(TARGET)
 
 # link all object files into the final executable
-$(TARGET): $(C_OBJS) $(CPP_OBJS)
+$(TARGET): $(C_OBJS) $(CPP_OBJS) | $(SYSTEMC_HOME)
 	$(CXX) $(CXXFLAGS) $(C_OBJS) $(CPP_OBJS) $(LDFLAGS) -o $(TARGET)
 
 # clean up the build directory
 clean:
 	rm -f $(TARGET)
-	rm -rf $(C_OBJS) $(CPP_OBJS)
-
-# Download and install SystemC
-$(SYSTEMC_HOME):
-	wget https://accellera.org/images/downloads/standards/systemc/systemc-2.3.3.tar.gz
-	tar -xzf systemc-2.3.3.tar.gz
-	cd systemc-2.3.3 && mkdir -p objdir && cd objdir && \
-	../configure --prefix=$(SYSTEMC_HOME) && \
-	$(MAKE) -j4 && $(MAKE) install
-	rm -rf systemc-2.3.3 systemc-2.3.3.tar.gz
+	rm -f $(C_SRCDIR)/*.o
+	rm -f $(CPP_SRCDIR)/*.o
 
 # Mark targets as phony to prevent conflicts with files of the same name
 .PHONY: all debug release clean
