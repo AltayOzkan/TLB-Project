@@ -1,83 +1,32 @@
-# ---------------------------------------
-# CONFIGURATION BEGIN
-# ---------------------------------------
-# Source Directories
-C_SRCDIR = src
-CPP_SRCDIR = src
+.PHONY: all clean
 
-# Source files for C and C++
-C_SRCS = $(wildcard $(C_SRCDIR)/*.c)
-CPP_SRCS = $(wildcard $(CPP_SRCDIR)/*.cpp)
-
-# Object files of the source files
-C_OBJS = $(C_SRCS:$(C_SRCDIR)/%.c=$(C_SRCDIR)/%.o)
-CPP_OBJS = $(CPP_SRCS:$(CPP_SRCDIR)/%.cpp=$(CPP_SRCDIR)/%.o)
-
-# Header files 
-HEADERS = $(wildcard $(C_SRCDIR)/*.h) $(wildcard $(CPP_SRCDIR)/*.h)
-
-# Name of the output executable
-TARGET = tlb_simulation
-
-# Path to SystemC
-SYSTEMC_HOME = systemc
-
-# C++ Compiler Flags
-CXXFLAGS = -std=c++14 -Wall -I$(SYSTEMC_HOME)/include
-
-# C Compiler Flags
-CFLAGS = -std=c17 -Wall -I$(SYSTEMC_HOME)/include
-
-# Linker flags -> link SystemC and other libraries
-LDFLAGS = -L$(SYSTEMC_HOME)/lib -lsystemc -lm
-
-# ---------------------------------------
-# CONFIGURATION END
-# ---------------------------------------
-
-# Check if g++/ clang++ is available -> set as C++ compiler
-CXX := $(shell command -v g++ || command -v clang++)
+# Check if g++ is available, if not, check if clang++ is available
+CXX := $(shell command -v g++ 2>/dev/null)
 ifeq ($(strip $(CXX)),)
-    $(error Neither clang++ nor g++ is available. Exiting.)
+    CXX := $(shell command -v clang++ 2>/dev/null)
 endif
 
-# Check if gcc/ clang is available -> set as C compiler
-CC := $(shell command -v gcc || command -v clang)
-ifeq ($(strip $(CC)),)
-    $(error Neither clang nor gcc is available. Exiting.)
-endif
+dest_dir := $(shell pwd)/systemc
 
-# rpath linker  
-LDFLAGS += -Wl,-rpath=$(SYSTEMC_HOME)/lib
 
-# Default target to build the debug version
-all: debug
+all: systemc
 
-# Compile .c files into .o object files
-$(C_SRCDIR)/%.o: $(C_SRCDIR)/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
+systemc: configure
+	mkdir -p systemc
+	cd temp/systemc/objdir && \
+	cmake -DCMAKE_INSTALL_PREFIX="$(dest_dir)" -DCMAKE_CXX_STANDARD=14  .. && \
+	make -j$$(nproc) 2> ../../../install.log && \
+	make install
+	rm -rf temp
 
-# Compile .cpp files into .o object files
-$(CPP_SRCDIR)/%.o: $(CPP_SRCDIR)/%.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+configure: temp
+	cd temp/systemc && \
+	mkdir -p objdir
 
-# Build the debug version of the project
-debug: CXXFLAGS += -g
-debug: $(TARGET)
+temp:
+	mkdir -p temp
+	cd temp && git clone --depth 1 --branch 2.3.4 https://github.com/accellera-official/systemc.git
 
-# Build the release version of the project
-release: CXXFLAGS += -O2
-release: $(TARGET)
-
-# Link all object files into the final executable
-$(TARGET): $(C_OBJS) $(CPP_OBJS)
-	$(CXX) $(CXXFLAGS) $(C_OBJS) $(CPP_OBJS) $(LDFLAGS) -o $@
-
-# Clean up the build directory
 clean:
-	rm -f $(TARGET)
-	rm -f $(C_SRCDIR)/*.o
-	rm -f $(CPP_SRCDIR)/*.o
-
-# Mark targets as phony to prevent conflicts with files of the same name
-.PHONY: all debug release clean
+	rm -rf systemc
+	rm -rf temp
